@@ -10,8 +10,8 @@ if(EMSCRIPTEN)
 
     FetchContent_Declare(
         SFML
-        GIT_REPOSITORY "https://github.com/Blaatand213/sfml-wasm.git"
-        GIT_TAG master
+        GIT_REPOSITORY "https://github.com/SFML/SFML.git"
+        GIT_TAG 3.0.0
     )
     
     set(SFML_OS_EMSCRIPTEN TRUE CACHE BOOL "" FORCE)
