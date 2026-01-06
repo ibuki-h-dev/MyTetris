@@ -11,28 +11,22 @@ jobs:
       - name: Checkout Project
         uses: actions/checkout@v4
 
-      # 別の動作確認済みリポジトリに切り替え
-      - name: Checkout SFML-WASM
-        uses: actions/checkout@v4
-        with:
-          repository: SFML/SFML
-          path: sfml-src
-          ref: 3.0.0 # 安定している3.0.0を指定
-
       - name: Setup Emscripten
         uses: mymindstorm/setup-emsdk@v14
         with:
           version: '3.1.50'
+
       - name: Build Project
         run: |
           mkdir build
           cd build
-          # -Dオプションを増やして Emscripten であることを確実に伝えます
+          # CMAKE_TOOLCHAIN_FILE は emcmake が自動設定しますが、
+          # SFML3に必要なフラグを明示的に渡します
           emcmake cmake .. -DCMAKE_BUILD_TYPE=Release \
-            -DSFML_SOURCE_DIR=${{ github.workspace }}/sfml-src \
-            -DSFML_OS_EMSCRIPTEN=1 \
-            -DSTRATEGY=EMSCRIPTEN \
-            -DCMAKE_CXX_FLAGS="-s USE_PTHREADS=0"
+            -DSFML_USE_SYSTEM_DEPS=OFF \
+            -DSFML_BUILD_AUDIO=OFF \
+            -DSFML_BUILD_NETWORK=OFF \
+            -DSFML_OS_EMSCRIPTEN=ON
           emmake make -j2
 
       - name: Deploy to GitHub Pages
