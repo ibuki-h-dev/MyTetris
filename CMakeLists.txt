@@ -5,11 +5,11 @@ if(EMSCRIPTEN)
     include(FetchContent)
     FetchContent_Declare(
         SFML
-        GIT_REPOSITORY https://github.com/Blaatand213/sfml-wasm.git
+        # URLを以下のように修正してみてください
+        GIT_REPOSITORY "https://github.com/Blaatand213/sfml-wasm.git"
         GIT_TAG master
     )
     
-    # Emscriptenビルドに必要な設定を強制
     set(SFML_OS_EMSCRIPTEN TRUE CACHE BOOL "" FORCE)
     set(SFML_BUILD_AUDIO FALSE CACHE BOOL "" FORCE)
     set(SFML_BUILD_NETWORK FALSE CACHE BOOL "" FORCE)
@@ -17,11 +17,10 @@ if(EMSCRIPTEN)
 
     FetchContent_MakeAvailable(SFML)
 else()
-    # PC用
     find_package(SFML 3.0.2 COMPONENTS Graphics Window System REQUIRED)
 endif()
 
-# あなたのソースファイル構成に合わせてください
+# 以下は前回と同じです
 add_executable(index 
     src/main.cpp 
     src/Board.cpp 
@@ -31,7 +30,6 @@ add_executable(index
 
 if(EMSCRIPTEN)
     target_link_libraries(index PRIVATE sfml-graphics sfml-window sfml-system)
-    
     set_target_properties(index PROPERTIES SUFFIX ".html")
     target_link_options(index PRIVATE 
         "-sALLOW_MEMORY_GROWTH=1"
@@ -44,3 +42,14 @@ else()
 endif()
 
 target_include_directories(index PRIVATE src)
+
+# 1. PC（Windows等）でビルドする時だけ実行する設定
+if(NOT EMSCRIPTEN)
+    add_custom_command(
+        TARGET index POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/assets"  # コピー元（ソース）
+        "$<TARGET_FILE_DIR:index>/assets"         # コピー先（.exeと同じ場所）
+        COMMENT "Copying assets to build directory..."
+    )
+endif()
