@@ -16,10 +16,13 @@ jobs:
           version: '3.1.50'
 
       # ★変更点：CMakeの前に手動でSFMLをダウンロードする
-      - name: Pre-download SFML
+      - name: Pre-download SFML (ZIP mode)
         run: |
-          git config --global --unset-all url."https://github.com/".insteadOf || true
-          git clone --depth 1 https://github.com/Blaatand213/sfml-wasm.git sfml-src
+          # GitではなくcurlでZIPファイルを直接ダウンロードする
+          curl -L https://github.com/Blaatand213/sfml-wasm/archive/refs/heads/master.zip -o sfml.zip
+          unzip sfml.zip
+          # フォルダ名をCMakeLists.txtが期待する「sfml-src」に変更
+          mv sfml-wasm-master sfml-src
       - name: Build Project
         run: |
           mkdir build
