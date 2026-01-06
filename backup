@@ -1,0 +1,193 @@
+#include <SFML/Graphics.hpp>
+#include "Board.hpp"
+#include "Piece.hpp"
+#include"Background.hpp"
+#include "Config.hpp"
+#include<vector>
+#include <ctime>
+#include <optional>
+
+int main(){
+    std::srand(static_cast<unsigned>(std::time(nullptr)));
+    
+    sf::RenderWindow window(sf::VideoMode({Config::ScreenWidth, Config::ScreenHeight}), "C++ Tetris");
+    window.setVerticalSyncEnabled(true);
+
+    Background bg(30);
+    Board board;
+    Piece piece(std::rand()%7);
+    sf::Clock clock;
+    sf::Clock dasClock;
+    sf::Clock arrClock;
+    sf::Clock lockClock;
+
+    float timer = 0.0f;
+    float lockDelay_changable = Config::lockDelay;
+    float lineClearTime = 0.4f;
+    bool isCleared = false;
+    bool isLeftHeled = false;
+    bool isRightHeled = false;
+    bool isDownHeled = false;
+    bool isSlashHeled = false;
+    bool isBackSlashHeled = false;
+    bool isTouchingGround = false;
+    bool canHold = true;
+    int currentID;
+    std::vector<int> next;
+    std::optional<int> hold;
+
+    while(window.isOpen()){
+        float time = clock.restart().asSeconds();
+        timer += time;
+        if(isCleared){
+            lineClearTime -= time;
+            if(lineClearTime <= 0){
+                lineClearTime = 0.4f;
+                isCleared = false;
+                // 硬直が終わってから新しいピースを生成する（ここでリセット）
+                currentID = next.front();
+                next.erase(next.begin());
+                piece = Piece(std::rand()%7);
+            }
+        }
+        if(!isCleared){
+        while(const std::optional event = window.pollEvent()){
+            if(event->is<sf::Event::Closed>()){
+                window.close();
+            }
+        }
+        while(next.size()<5){
+            next.push_back(std::rand()%7);
+        }
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left)){
+            if(!isLeftHeled){
+                piece.move(board, -1, 0);
+                dasClock.restart();
+                isLeftHeled = true;
+            }else if(dasClock.getElapsedTime().asSeconds()>Config::dasDelay){
+                if(arrClock.getElapsedTime().asSeconds() > Config::arrDelay){
+                    piece.move(board, -1, 0);
+                    arrClock.restart();
+                }
+            }
+        }else{
+            isLeftHeled =false;
+        }
+        
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right)){
+            if(!isRightHeled){
+                piece.move(board, +1, 0);
+                dasClock.restart();
+                isRightHeled = true;
+            }else if(dasClock.getElapsedTime().asSeconds()>Config::dasDelay){
+                if(arrClock.getElapsedTime().asSeconds() > Config::arrDelay){
+                    piece.move(board, +1, 0);
+                    arrClock.restart();
+                }
+            }
+        }else{
+            isRightHeled = false;
+        }
+        
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up)){
+            while(piece.move(board , 0, 1)){}
+            isTouchingGround = true;
+            lockDelay_changable = 0.2f;
+        }
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down)){
+            if(!isDownHeled){
+                piece.move(board, 0, 1);
+                dasClock.restart();
+                isDownHeled = true;
+            }else if(dasClock.getElapsedTime().asSeconds()> Config::dasDelay){
+                if(arrClock.getElapsedTime().asSeconds() > Config::arrDelay){
+                    piece.move(board, 0, 1);
+                    arrClock.restart();
+                }
+            }else{
+                isDownHeled = false;
+            }
+        }
+
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Slash)){
+            if(!isSlashHeled){
+                piece.rotate(board, true);
+                isSlashHeled = true;
+            }
+        }else{
+            isSlashHeled = false;
+        }
+
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Z)){
+            if(!isBackSlashHeled){
+                piece.rotate(board, false);
+                isBackSlashHeled = true;
+            }
+        }else{
+            isBackSlashHeled = false;
+        }
+
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Enter)){
+            if(canHold){
+                if(!hold.has_value()){
+                    hold = currentID;
+                    currentID = next.front();
+                    piece = Piece(currentID);
+                }else{
+                    int tmp = currentID;
+                    currentID = hold.value();
+                    hold = tmp;
+                    piece = Piece(currentID);
+                }
+                canHold = false; 
+            }
+        }
+        if(timer > Config::defaultDelay){
+            if(!piece.move(board, 0, 1)){
+                isTouchingGround = true;
+            } else{
+                isTouchingGround = false;
+                lockClock.reset();
+            }
+            timer=0.0f;
+        }
+        if(isTouchingGround){
+            if(lockClock.getElapsedTime().asSeconds() > lockDelay_changable){
+                for(int i=0; i<4; i++){
+                    board.placeBlock(piece.getX(i), piece.getY(i), piece.getID());
+                }
+                if(board.clearLines()>0){
+                    isCleared = true;
+                }else{
+                    currentID = next.front();
+                    next.erase(next.begin());
+                    piece = Piece(currentID); 
+                }
+                isTouchingGround = false;
+                canHold = true;
+                lockDelay_changable = 0.5f;
+            }
+        }else{
+            lockClock.restart();
+        }
+    }else{
+        while(const std::optional event = window.pollEvent()){
+        if(event->is<sf::Event::Closed>()) window.close();
+    }
+    }
+    
+    
+    window.clear();
+    bg.update();
+    bg.draw(window);
+    board.update(time);
+    board.draw(window);
+    if(!isCleared){
+        Piece shadow = piece;
+        while(shadow.move(board, 0, 1)){}
+        shadow.draw(window, true);
+        piece.draw(window, false);
+    }
+    window.display();
+    }
+}
