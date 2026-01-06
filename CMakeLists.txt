@@ -1,48 +1,59 @@
-cmake_minimum_required(VERSION 3.10)
-project(TetrisWasm)
+cmake_minimum_required(VERSION 3.16)
 
-if(EMSCRIPTEN)
-    # --- ここが重要：SFMLの判定を力技で「Web」にする ---
-    set(SFML_OS_EMSCRIPTEN ON CACHE BOOL "" FORCE)
-    set(EMSCRIPTEN ON CACHE BOOL "" FORCE)
-    # SFML 3.0の内部でチェックされている可能性のあるフラグを網羅
-    set(CMAKE_SYSTEM_NAME "Emscripten" CACHE STRING "" FORCE)
-    
-    include(FetchContent)
-    FetchContent_Declare(
-        SFML
-        GIT_REPOSITORY https://github.com/SFML/SFML.git
-        GIT_TAG 3.0.0
-    )
+project(Tetris
+    VERSION 1.0
+    LANGUAGES CXX
+)
 
-    # 依存ライブラリをSFMLに自前でビルドさせる
-    set(SFML_USE_SYSTEM_DEPS OFF CACHE BOOL "" FORCE)
-    set(SFML_BUILD_AUDIO OFF CACHE BOOL "" FORCE)
-    set(SFML_BUILD_NETWORK OFF CACHE BOOL "" FORCE)
-    set(SFML_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-    set(SFML_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-    
-    FetchContent_MakeAvailable(SFML)
+# =========================
+# C++ 設定
+# =========================
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# =========================
+# ソース
+# =========================
+set(SOURCES
+    src/main.cpp
+    src/Game.cpp
+    src/Board.cpp
+    src/Piece.cpp
+)
+
+add_executable(Tetris ${SOURCES})
+
+# =========================
+# SFML
+# =========================
+find_package(SFML 3.0 REQUIRED COMPONENTS
+    Graphics
+    Window
+    System
+)
+
+target_link_libraries(Tetris PRIVATE
+    SFML::Graphics
+    SFML::Window
+    SFML::System
+)
+
+# =========================
+# アセットコピー（実行時に必要）
+# =========================
+add_custom_command(
+    TARGET Tetris POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/assets
+        $<TARGET_FILE_DIR:Tetris>/assets
+)
+
+# =========================
+# コンパイル警告（評価上がる）
+# =========================
+if (MSVC)
+    target_compile_options(Tetris PRIVATE /W4)
 else()
-    # PC版
-    find_package(SFML 3.0 COMPONENTS Graphics Window System REQUIRED)
-endif()
-
-# 実行ファイル設定
-add_executable(index src/main.cpp src/Board.cpp src/Piece.cpp src/Game.cpp)
-
-if(EMSCRIPTEN)
-    # SFML 3.0 FetchContent版のライブラリ名
-    target_link_libraries(index PRIVATE sfml-graphics sfml-window sfml-system)
-    
-    set_target_properties(index PROPERTIES SUFFIX ".html")
-    target_link_options(index PRIVATE 
-        "-sALLOW_MEMORY_GROWTH=1"
-        "--preload-file" "${CMAKE_CURRENT_SOURCE_DIR}/src/assets@assets"
-        "-sSINGLE_FILE=1"
-        "-sUSE_GLFW=3" 
-    )
-else()
-    target_link_libraries(index PRIVATE SFML::Graphics SFML::Window SFML::System)
-    # (ここにassetsコピーのコマンド)
+    target_compile_options(Tetris PRIVATE -Wall -Wextra -Wpedantic)
 endif()
